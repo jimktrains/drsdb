@@ -1,0 +1,8 @@
+[package]
+name = "drsdb"
+version = "0.1.0"
+description = "A Distributed, written-in-Rust SQL database"
+license = "https://www.gnu.org/licenses/agpl.txt"
+authors = ["Jim Keener <jim@jimkeener.com>"]
+
+[dependencies]
