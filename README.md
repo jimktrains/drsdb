@@ -38,9 +38,9 @@ results directly to clients
                   | Index Server |---|  | Storage Server  |
                   +--------------+----->+-----------------+
 
-This project will start with a subset of SQL 92
-as the spec can be found freely online 
-(https://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt).
+This project will start with a subset of
+[SQL 92](https://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt),
+as the spec can be found freely online.
 
 Joins will be slow, but should be supported. I would like to explore
 automatically indexing foreign key constraints in order to figure out
@@ -65,8 +65,8 @@ isn't what we're after here.
 
 ## (V 0.3) Lexical-Distributed  IDs
 
-Instead of sequential ids, [Snowflake](https://web.archive.org/web/20101006173631/http://github.com/twitter/snowflake)
-[[1]](http://github.com/twitter/snowflake) [[2]](http://rob.conery.io/2014/05/29/a-better-id-generator-for-postgresql/)
+Instead of sequential ids, Snowflake ([[0]](https://web.archive.org/web/20101006173631/http://github.com/twitter/snowflake)
+[[1]](http://github.com/twitter/snowflake) [[2]](http://rob.conery.io/2014/05/29/a-better-id-generator-for-postgresql/))
 or [ULID](https://github.com/alizain/ulid).  Having to consult a distributed
 log an extra time during creation isn't all that nice to do.
 
