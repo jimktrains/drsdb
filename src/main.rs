@@ -63,6 +63,7 @@ static IDX2WIRE_TYPE: &'static [PBWireType; 6] = &[PBWireType::VarInt,
 #[derive(Clone, Copy, Debug)]
 enum PBParseError {
     UnknownWireType(usize),
+    BadVarInt,
 }
 
 fn PBParseNext<'a>(pos: ParserPosition<'a>)
@@ -84,6 +85,23 @@ fn PBParseNext<'a>(pos: ParserPosition<'a>)
             let x = &p.slice[start..end];
             p.slice = &p.slice[end..];
             x
+        }
+        PBWireType::VarInt => {
+            let mut end: Option<usize> = None;
+            for i in 1..p.slice.len() {
+                if p.slice[i] >> 7 != 1 {
+                    end = Some(i + 1);
+                }
+            }
+            match end {
+                Some(end_idx) => {
+                    let x = &p.slice[1..end_idx];
+                    p.slice = &p.slice[end_idx..];
+                    x
+                }
+                None => return Err(PBParseError::BadVarInt),
+            }
+
         }
         _ => &[],
     };
@@ -161,6 +179,7 @@ fn main() {
      *     message Test2 {
      *       required string a = 1;
      *       required string b = 2;
+     *       required int c = 3
      *     }
      *
      * with a = test, b = testing
@@ -168,23 +187,25 @@ fn main() {
      * @see https://developers.google.com/protocol-buffers/docs/encoding
      */
     let msg = vec![0x12, 0x07, 0x74, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x67, 0x0a, 0x04, 0x74, 0x65,
-                   0x73, 0x74];
+                   0x73, 0x74, 0x18, 0xac, 0x02];
     let msg_slice = msg.as_slice();
 
     let (mut x, mut pp) = PBParseNext(ParserPosition::init(msg_slice)).unwrap();
 
-    print!("Tag   = {}\n", x.tag);
+    print!("Tag   = {} {:?}\n", x.tag, x.wire_type);
     print!("Value = {}\n",
            StringRepr(x.wire_type, PBType::String, x.value).unwrap());
 
     let (x, pp) = PBParseNext(pp).unwrap();
 
-    print!("Tag   = {}\n", x.tag);
+    print!("Tag   = {} {:?}\n", x.tag, x.wire_type);
     print!("Value = {}\n",
            StringRepr(x.wire_type, PBType::String, x.value).unwrap());
 
-    print!("300 = {}\n",
-           IntegerRepr(PBWireType::VarInt, PBType::Integer64, &[0xacu8, 0x02u8]).unwrap());
-    print!("300 = string {}\n",
-           StringRepr(PBWireType::VarInt, PBType::Integer64, &[0xacu8, 0x02u8]).unwrap());
+    let (x, pp) = PBParseNext(pp).unwrap();
+
+    print!("Tag   = {} {:?}\n", x.tag, x.wire_type);
+    print!("Value = {}\n",
+           StringRepr(x.wire_type, PBType::Integer64, x.value).unwrap());
+
 }
