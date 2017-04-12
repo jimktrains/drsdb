@@ -1,33 +1,3 @@
-#[derive(Clone)]
-enum PBType {
-    Double,
-    Float,
-    Int32,
-    Int64,
-    Uint32,
-    Uint64,
-    Sint32,
-    sInt64,
-    Fixed32,
-    Fixed64,
-    Sfixed32,
-    Sfixed64,
-    Bool,
-    String,
-    Bytes,
-}
-
-struct PBField {
-    name: String,
-    tag: u8,
-    field_type: PBType,
-}
-
-struct PBMessage {
-    name: String,
-    fields: Vec<PBField>,
-}
-
 #[derive(Debug)]
 #[derive(Clone)]
 enum PBWireType {
@@ -39,9 +9,9 @@ enum PBWireType {
 }
 
 
-struct TagValue {
+struct TagValue<'a> {
     tag: u8,
-    value: Vec<u8>,
+    value: &'a [u8],
 }
 
 #[derive(Clone)]
@@ -53,7 +23,7 @@ struct ParserPosition {
     max_idx: u8,
 }
 
-fn PBParseNext(s: Vec<u8>, pos: ParserPosition) -> (TagValue, ParserPosition) {
+fn PBParseNext<'a>(s: &'a [u8], pos: ParserPosition) -> (TagValue<'a>, ParserPosition) {
     let idx2wireType = vec![PBWireType::VarInt,
                             PBWireType::Fixed64,
                             PBWireType::LengthDelim,
@@ -80,37 +50,19 @@ fn PBParseNext(s: Vec<u8>, pos: ParserPosition) -> (TagValue, ParserPosition) {
         }
         _ => &[],
     };
-    let mut v = Vec::new();
-    v.extend_from_slice(value);
     (TagValue {
-         value: v.clone(),
+         value: value,
          tag: p.tag,
      },
      p.clone())
 }
 
-fn PBBytesToString(field_type: PBType, bytes: Vec<u8>) -> String {
-    match field_type {
-        PBType::String => String::from_utf8(bytes).unwrap(),
-        _ => String::from("Not Implemented"),
-    }
-}
+use std::str;
 
 fn main() {
-    let field = PBField {
-        name: String::from("b"),
-        tag: 2,
-        field_type: PBType::String,
-    };
-    let msg = PBMessage {
-        name: String::from("Test2"),
-        fields: vec![field],
-    };
-
-
     let msg = vec![0x12, 0x07, 0x74, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x67];
 
-    let (x, pp) = PBParseNext(msg,
+    let (x, pp) = PBParseNext(msg.as_slice(),
                               ParserPosition {
                                   position: 0,
                                   tag: 0,
@@ -120,5 +72,5 @@ fn main() {
                               });
 
     print!("Tag   = {}\n", x.tag);
-    print!("Value = {}\n", String::from_utf8(x.value).unwrap());
+    print!("Value = {}\n", str::from_utf8(x.value).unwrap());
 }
