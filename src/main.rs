@@ -116,10 +116,10 @@ fn StringRepr<'a>(wire_type: PBWireType,
             }
         }
         (PBWireType::VarInt, PBType::Integer64) => {
-          match IntegerRepr(wire_type, schema_type, bytes) {
-            Ok(i) => Ok(String::from(format!("{}", i))),
-            Err(e) => Err(e)
-          }
+            match IntegerRepr(wire_type, schema_type, bytes) {
+                Ok(i) => Ok(String::from(format!("{}", i))),
+                Err(e) => Err(e),
+            }
         }
         _ => Err(ReprError::InvalidWireAndSchemaType),
     }
@@ -138,11 +138,11 @@ fn IntegerRepr<'a>(wire_type: PBWireType,
             for b in bytes {
                 // I'm assuming I have an endieness problem here?
                 for i in 0..7 {
-                  let bit_shift = 6-i;
-                  let pow_add = pos + 6 - i;
-                  if ((b >> (6-i)) & 1u8) == 1u8 {
-                    res += num::pow(2, (pow_add) as usize);
-                  }
+                    let bit_shift = 6 - i;
+                    let pow_add = pos + 6 - i;
+                    if ((b >> (6 - i)) & 1u8) == 1u8 {
+                        res += num::pow(2, (pow_add) as usize);
+                    }
                 }
                 pos += 7;
             }
