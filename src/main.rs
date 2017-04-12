@@ -183,7 +183,7 @@ fn main() {
      *       required int c = 3
      *     }
      *
-     * with a = test, b = testing
+     * with a = test, b = testing, c = 300
      *
      * @see https://developers.google.com/protocol-buffers/docs/encoding
      */
