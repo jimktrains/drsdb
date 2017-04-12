@@ -63,6 +63,17 @@ fn PBParseNext<'a>(s: &'a [u8], pos: ParserPosition) -> (TagValue<'a>, ParserPos
 use std::str;
 
 fn main() {
+    /*
+     * Sample ProtocolBuffer message for schema:
+     *
+     *     message Test2 {
+     *       required string b = 2;
+     *     }
+     *
+     * with b = testing
+     *
+     * @see https://developers.google.com/protocol-buffers/docs/encoding
+     */
     let msg = vec![0x12, 0x07, 0x74, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x67];
 
     let (x, pp) = PBParseNext(msg.as_slice(),
