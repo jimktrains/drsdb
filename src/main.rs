@@ -1,3 +1,22 @@
+#[derive(Clone, Debug)]
+enum PBType {
+    Integer64,
+    String,
+}
+
+#[derive(Clone, Debug)]
+struct PBField {
+    name: String,
+    tag: u8,
+    field_type: PBType,
+}
+
+#[derive(Clone, Debug)]
+struct PBMessage {
+    name: String,
+    fields: Vec<PBField>,
+}
+
 #[derive(Clone, Copy, Debug)]
 enum PBWireType {
     VarInt,
@@ -10,6 +29,7 @@ enum PBWireType {
 
 struct TagValue<'a> {
     tag: u8,
+    wire_type: PBWireType,
     value: &'a [u8],
 }
 
@@ -18,8 +38,6 @@ struct ParserPosition<'a> {
     slice: &'a [u8],
     tag: u8,
     wire_type: PBWireType,
-    cur_idx: u8,
-    max_idx: u8,
 }
 
 trait InitParserPosition<'a> {
@@ -32,8 +50,6 @@ impl<'a> InitParserPosition<'a> for ParserPosition<'a> {
             slice: msg_slice,
             tag: 0,
             wire_type: PBWireType::Reserved,
-            cur_idx: 0,
-            max_idx: 0,
         }
     }
 }
@@ -53,18 +69,13 @@ fn PBParseNext<'a>(pos: ParserPosition<'a>)
                    -> Result<(TagValue<'a>, ParserPosition<'a>), PBParseError> {
     let mut p = pos.clone();
 
-    if p.cur_idx == p.max_idx {
-        p.tag = p.slice[0] >> 3;
-        let wire_type_idx = (p.slice[0] & 7) as usize;
-        if wire_type_idx >= IDX2WIRE_TYPE.len() {
-            return Err(PBParseError::UnknownWireType(wire_type_idx));
-        }
-        p.wire_type = IDX2WIRE_TYPE[wire_type_idx];
-        p.cur_idx = 0;
-        p.max_idx = 0;
-    } else {
-        p.cur_idx += 1;
+    p.tag = p.slice[0] >> 3;
+    let wire_type_idx = (p.slice[0] & 7) as usize;
+    if wire_type_idx >= IDX2WIRE_TYPE.len() {
+        return Err(PBParseError::UnknownWireType(wire_type_idx));
     }
+    p.wire_type = IDX2WIRE_TYPE[wire_type_idx];
+
     let mut value = match p.wire_type {
         PBWireType::LengthDelim => {
             let offset = p.slice[1] as usize;
@@ -79,11 +90,66 @@ fn PBParseNext<'a>(pos: ParserPosition<'a>)
     Ok((TagValue {
             value: value,
             tag: p.tag,
+            wire_type: p.wire_type,
         },
         p.clone()))
 }
 
 use std::str;
+
+#[derive(Debug)]
+enum ReprError {
+    InvalidWireAndSchemaType,
+    Utf8Error(std::str::Utf8Error),
+}
+
+fn StringRepr<'a>(wire_type: PBWireType,
+                  schema_type: PBType,
+                  bytes: &'a [u8])
+                  -> Result<String, ReprError> {
+    match (wire_type, schema_type) {
+        (PBWireType::LengthDelim, PBType::String) => {
+            let x = str::from_utf8(bytes);
+            match x {
+                Ok(y) => Ok(String::from(y)),
+                Err(y) => Err(ReprError::Utf8Error(y)),
+            }
+        }
+        _ => Err(ReprError::InvalidWireAndSchemaType),
+    }
+}
+
+fn IntegerRepr<'a>(wire_type: PBWireType,
+                   schema_type: PBType,
+                   bytes: &'a [u8])
+                   -> Result<i64, ReprError> {
+
+    extern crate num;
+    match (wire_type, schema_type) {
+        (PBWireType::VarInt, PBType::Integer64) => {
+            let mut pos: u8 = 0;
+            let mut res: i64 = 0;
+            for b in bytes {
+                // I'm assuming I have an endieness problem here?
+                for i in 0..7 {
+                  let bit_shift = 6-i;
+                  let pow_add = pos + 6 - i;
+                  print!("{} {} {} {}", i, bit_shift, pow_add, ((b >> bit_shift) & 1u8));
+                  if ((b >> (6-i)) & 1u8) == 1u8 {
+                    res += num::pow(2, (pow_add) as usize);
+                    print!(" {} {}",  num::pow(2, (pow_add) as usize), res);
+                  }
+                  print!("\n");
+                }
+                pos += 7;
+            }
+            Ok(res)
+        }
+        _ => Err(ReprError::InvalidWireAndSchemaType),
+    }
+}
+
+
 
 fn main() {
     /*
@@ -105,10 +171,15 @@ fn main() {
     let (mut x, mut pp) = PBParseNext(ParserPosition::init(msg_slice)).unwrap();
 
     print!("Tag   = {}\n", x.tag);
-    print!("Value = {}\n", str::from_utf8(x.value).unwrap());
+    print!("Value = {}\n",
+           StringRepr(x.wire_type, PBType::String, x.value).unwrap());
 
     let (x, pp) = PBParseNext(pp).unwrap();
 
     print!("Tag   = {}\n", x.tag);
-    print!("Value = {}\n", str::from_utf8(x.value).unwrap());
+    print!("Value = {}\n",
+           StringRepr(x.wire_type, PBType::String, x.value).unwrap());
+
+    print!("300 = {}\n",
+           IntegerRepr(PBWireType::VarInt, PBType::Integer64, &[0xacu8, 0x02u8]).unwrap());
 }

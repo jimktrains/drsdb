@@ -6,3 +6,4 @@ license = "https://www.gnu.org/licenses/agpl.txt"
 authors = ["Jim Keener <jim@jimkeener.com>"]
 
 [dependencies]
+num = "*"
