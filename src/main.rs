@@ -36,8 +36,6 @@ struct TagValue<'a> {
 #[derive(Clone)]
 struct ParserPosition<'a> {
     slice: &'a [u8],
-    tag: u8,
-    wire_type: PBWireType,
 }
 
 trait InitParserPosition<'a> {
@@ -46,11 +44,7 @@ trait InitParserPosition<'a> {
 
 impl<'a> InitParserPosition<'a> for ParserPosition<'a> {
     fn init(msg_slice: &'a [u8]) -> ParserPosition<'a> {
-        ParserPosition {
-            slice: msg_slice,
-            tag: 0,
-            wire_type: PBWireType::Reserved,
-        }
+        ParserPosition { slice: msg_slice }
     }
 }
 
@@ -64,27 +58,21 @@ static IDX2WIRE_TYPE: &'static [PBWireType; 6] = &[PBWireType::VarInt,
 enum PBParseError {
     UnknownWireType(usize),
     BadVarInt,
+    WireTypeNotHandled,
 }
 
-fn PBParseNext<'a>(pos: ParserPosition<'a>)
-                   -> Result<(TagValue<'a>, ParserPosition<'a>), PBParseError> {
+fn ParseWireType<'a>(wire_type: PBWireType,
+                     pos: ParserPosition<'a>)
+                     -> Result<(&'a [u8], ParserPosition<'a>), PBParseError> {
     let mut p = pos.clone();
-
-    p.tag = p.slice[0] >> 3;
-    let wire_type_idx = (p.slice[0] & 7) as usize;
-    if wire_type_idx >= IDX2WIRE_TYPE.len() {
-        return Err(PBParseError::UnknownWireType(wire_type_idx));
-    }
-    p.wire_type = IDX2WIRE_TYPE[wire_type_idx];
-
-    let mut value = match p.wire_type {
+    match wire_type {
         PBWireType::LengthDelim => {
             let offset = p.slice[1] as usize;
             let start = 2;
             let end = 2 + offset;
             let x = &p.slice[start..end];
             p.slice = &p.slice[end..];
-            x
+            Ok((x, p))
         }
         PBWireType::VarInt => {
             let mut end: Option<usize> = None;
@@ -97,18 +85,31 @@ fn PBParseNext<'a>(pos: ParserPosition<'a>)
                 Some(end_idx) => {
                     let x = &p.slice[1..end_idx];
                     p.slice = &p.slice[end_idx..];
-                    x
+                    Ok((x, p))
                 }
-                None => return Err(PBParseError::BadVarInt),
+                None => Err(PBParseError::BadVarInt),
             }
 
         }
-        _ => &[],
-    };
+        _ => Err(PBParseError::WireTypeNotHandled),
+    }
+}
+
+fn PBParseNext<'a>(pos: ParserPosition<'a>)
+                   -> Result<(TagValue<'a>, ParserPosition<'a>), PBParseError> {
+    let mut p = pos.clone();
+
+    let tag = p.slice[0] >> 3;
+    let wire_type_idx = (p.slice[0] & 7) as usize;
+    if wire_type_idx >= IDX2WIRE_TYPE.len() {
+        return Err(PBParseError::UnknownWireType(wire_type_idx));
+    }
+    let wire_type = IDX2WIRE_TYPE[wire_type_idx];
+    let (value, p) = try!(ParseWireType(wire_type, p));
     Ok((TagValue {
             value: value,
-            tag: p.tag,
-            wire_type: p.wire_type,
+            tag: tag,
+            wire_type: wire_type,
         },
         p.clone()))
 }
