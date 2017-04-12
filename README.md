@@ -50,8 +50,20 @@ how to better store data to enable joins to be more performant.
 # Timeline
 ## (V 0.1) Simple-on-disk format R/W
 
-I'm debating between backing with SQLite, or perhaps (G)DBM.  I would
-like the ability for these to be able to support ACID writes.
+Working on building Protocol Buffers serializer/deserializer based upon a
+run-time schema. I'd imagine an API like:
+
+* LessThan(field, pbs1, pbs2)
+* GreaterThan(field, pbs1, pbs2)
+* EqualTo(field, pbs1, pbs2)
+* StringRepr(field, pbs1)
+* Bytes(field, pbs1)
+
+where pbs is an object with a (borrowed/shared) protocol buffers schema and
+a raw buffer.
+
+The expectation is that the clients will have created a protocol buffer
+serializer/deserializer to a business object themselves.
 
 N.B.: The Storage Server will be able to use heterogeneous storage methods
 (either by server or by table, I haven't thought about it). This is just the
