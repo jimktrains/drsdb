@@ -1,5 +1,4 @@
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug)]
 enum PBWireType {
     VarInt,
     Fixed64,
@@ -35,7 +34,7 @@ fn PBParseNext<'a>(s: &'a [u8], pos: ParserPosition) -> (TagValue<'a>, ParserPos
 
     if p.cur_idx == p.max_idx {
         p.tag = s[p.position] >> 3;
-        p.wire_type = idx2wireType[(s[p.position] & 7) as usize].clone();
+        p.wire_type = idx2wireType[(s[p.position] & 7) as usize];
         p.position += 1;
         p.cur_idx = 0;
         p.max_idx = 0;
@@ -67,16 +66,18 @@ fn main() {
      * Sample ProtocolBuffer message for schema:
      *
      *     message Test2 {
+     *       required string a = 1;
      *       required string b = 2;
      *     }
      *
-     * with b = testing
+     * with a = test, b = testing
      *
      * @see https://developers.google.com/protocol-buffers/docs/encoding
      */
-    let msg = vec![0x12, 0x07, 0x74, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x67];
+    let msg = vec![0x12, 0x07, 0x74, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x67,
+                   0x0a, 0x04, 0x74, 0x65, 0x73, 0x74];
 
-    let (x, pp) = PBParseNext(msg.as_slice(),
+    let (mut x, mut pp) = PBParseNext(msg.as_slice(),
                               ParserPosition {
                                   position: 0,
                                   tag: 0,
@@ -84,6 +85,11 @@ fn main() {
                                   cur_idx: 0,
                                   max_idx: 0,
                               });
+
+    print!("Tag   = {}\n", x.tag);
+    print!("Value = {}\n", str::from_utf8(x.value).unwrap());
+
+    let (x, pp) = PBParseNext(msg.as_slice(), pp);
 
     print!("Tag   = {}\n", x.tag);
     print!("Value = {}\n", str::from_utf8(x.value).unwrap());
