@@ -1,4 +1,4 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 enum PBType {
     Integer64,
     String,
@@ -115,6 +115,12 @@ fn StringRepr<'a>(wire_type: PBWireType,
                 Err(y) => Err(ReprError::Utf8Error(y)),
             }
         }
+        (PBWireType::VarInt, PBType::Integer64) => {
+          match IntegerRepr(wire_type, schema_type, bytes) {
+            Ok(i) => Ok(String::from(format!("{}", i))),
+            Err(e) => Err(e)
+          }
+        }
         _ => Err(ReprError::InvalidWireAndSchemaType),
     }
 }
@@ -134,12 +140,9 @@ fn IntegerRepr<'a>(wire_type: PBWireType,
                 for i in 0..7 {
                   let bit_shift = 6-i;
                   let pow_add = pos + 6 - i;
-                  print!("{} {} {} {}", i, bit_shift, pow_add, ((b >> bit_shift) & 1u8));
                   if ((b >> (6-i)) & 1u8) == 1u8 {
                     res += num::pow(2, (pow_add) as usize);
-                    print!(" {} {}",  num::pow(2, (pow_add) as usize), res);
                   }
-                  print!("\n");
                 }
                 pos += 7;
             }
@@ -182,4 +185,6 @@ fn main() {
 
     print!("300 = {}\n",
            IntegerRepr(PBWireType::VarInt, PBType::Integer64, &[0xacu8, 0x02u8]).unwrap());
+    print!("300 = string {}\n",
+           StringRepr(PBWireType::VarInt, PBType::Integer64, &[0xacu8, 0x02u8]).unwrap());
 }
