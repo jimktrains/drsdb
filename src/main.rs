@@ -40,6 +40,9 @@ fn PBParseNext<'a>(s: &'a [u8], pos: ParserPosition) -> (TagValue<'a>, ParserPos
         p.cur_idx = 0;
         p.max_idx = 0;
     }
+    else {
+      p.cur_idx += 1;
+    }
     let mut value = match p.wire_type {
         PBWireType::LengthDelim => {
             let offset = s[p.position] as usize;

@@ -62,6 +62,9 @@ run-time schema. I'd imagine an API like:
 where pbs is an object with a (borrowed/shared) protocol buffers schema and
 a raw buffer.
 
+May aim for ProtoBuf2 support so as to not have to deal with repeated fields
+right away.
+
 The expectation is that the clients will have created a protocol buffer
 serializer/deserializer to a business object themselves.
 
