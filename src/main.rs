@@ -22,6 +22,22 @@ struct ParserPosition<'a> {
     max_idx: u8,
 }
 
+trait InitParserPosition<'a> {
+    fn init(msg_slice: &'a [u8]) -> ParserPosition<'a>;
+}
+
+impl<'a> InitParserPosition<'a> for ParserPosition<'a> {
+    fn init(msg_slice: &'a [u8]) -> ParserPosition<'a> {
+        ParserPosition {
+            slice: msg_slice,
+            tag: 0,
+            wire_type: PBWireType::Reserved,
+            cur_idx: 0,
+            max_idx: 0,
+        }
+    }
+}
+
 static IDX2WIRE_TYPE: &'static [PBWireType; 6] = &[PBWireType::VarInt,
                                                    PBWireType::Fixed64,
                                                    PBWireType::LengthDelim,
@@ -86,14 +102,7 @@ fn main() {
                    0x73, 0x74];
     let msg_slice = msg.as_slice();
 
-    let (mut x, mut pp) = PBParseNext(ParserPosition {
-                                          slice: msg_slice,
-                                          tag: 0,
-                                          wire_type: PBWireType::Reserved,
-                                          cur_idx: 0,
-                                          max_idx: 0,
-                                      })
-            .unwrap();
+    let (mut x, mut pp) = PBParseNext(ParserPosition::init(msg_slice)).unwrap();
 
     print!("Tag   = {}\n", x.tag);
     print!("Value = {}\n", str::from_utf8(x.value).unwrap());
